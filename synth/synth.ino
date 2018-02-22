@@ -4,9 +4,6 @@
 #include <SPI.h>
 #include <SerialFlash.h>
 
-
-
-
 // GUItool: begin automatically generated code
 AudioSynthWaveform       waveform1;      //xy=871.9259643554688,81.74080657958984
 AudioSynthWaveform       waveform2;      //xy=871.9259643554688,120.74080657958984
@@ -542,24 +539,73 @@ void setup()
     }
 
     // Initialise audio
-    AudioMemory(8);
+    AudioMemory(61);
     audioShield.enable();
-    audioShield.volume(4.0f);
+    audioShield.volume(2.0f);
 }
 
-uint currentOctave = 2;
+uint currentOctave = 0;
 uint currentNote = 0;
 uint32_t lastNoteStart;
-uint32_t keyPressStartTimes[OCTAVES_CNT][NOTES_PER_OCTAVE];
+uint32_t keyPressStartTimes[OCTAVES_CNT][NOTES_PER_OCTAVE] = {
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+};
 
+#define NOTES_COUNT 36
+uint notes[NOTES_COUNT][2] = {
+    { 0, 0 },
+    { 2, 2 },
+    { 1, 4 },
+    { 3, 5 },
+    { 4, 7 },
+    { 1, 9 },
+    { 2, 11 },
+    { 0, 0 },
+    { 0, 2 },
+    { 0, 4 },
+    { 0, 5 },
+    { 1, 7 },
+    { 1, 9 },
+    { 1, 11 },
+    { 1, 0 },
+    { 1, 2 },
+    { 1, 4 },
+    { 1, 5 },
+    { 1, 7 },
+    { 1, 9 },
+    { 1, 11 },
+    { 3, 0 },
+    { 3, 2 },
+    { 3, 4 },
+    { 3, 5 },
+    { 3, 7 },
+    { 3, 9 },
+    { 3, 11 },
+    { 4, 0 },
+    { 4, 2 },
+    { 4, 4 },
+    { 4, 5 },
+    { 4, 7 },
+    { 4, 9 },
+    { 4, 11 },
+    { 5, 0 },
+};
+
+int currentNoteId = 0;
+ 
 void loop()
 {
     // Scan the keyboard
     for (uint note = 0; note < NOTES_PER_OCTAVE; note++) {
         // Write the note number binary value over the 4 multiplexer address lines
-        // (selects one note in each octave)
+        // (therefore selecting one note in each octave, or 1 line in each multiplexer)
 
-        for (int bit = 0; bit < (int)ADDR_PIN_CNT; bit++)
+        for (uint bit = 0; bit < ADDR_PIN_CNT; bit++)
             digitalWrite(MuxAddressPins[bit], 1 & (note >> bit));
 
         delayMicroseconds(1); // leave the multiplexer some time to switch (~500ns @3.3V)
@@ -567,14 +613,16 @@ void loop()
         for (uint octave = 0; octave < OCTAVES_CNT; octave++) {
             if (Keys[octave][note].IsValid()) {
                 //Keys[octave][key].SetInputVoltage(analogInPins[octave], millis());
-                Keys[octave][note].SetInputVoltage(SimulateKeyMotion(keyPressStartTimes[octave][note]), millis());
+                Keys[octave][note].SetInputVoltage(SimulateKeyMotionVoltage(keyPressStartTimes[octave][note]), millis());
             }
         }
     }
 
+    uint32_t now = millis();
+
     // press next key
-    if ((millis() - lastNoteStart) > 200) {
-        lastNoteStart = millis();
+    if ((now - lastNoteStart) > 200) {
+        lastNoteStart = now;
 
         // skip the last octave except for the first key
         if (currentOctave == OCTAVES_CNT - 1 && currentNote == 0) {
@@ -584,34 +632,32 @@ void loop()
             currentNote = (currentNote + 1) % NOTES_PER_OCTAVE;
         else
             currentNote = (currentNote + 2) % NOTES_PER_OCTAVE;
+
         if (currentNote == 0)
             currentOctave = (currentOctave + 1) % OCTAVES_CNT;
 
-        keyPressStartTimes[currentOctave][currentNote] = millis();
+        /*
+        currentNoteId = (currentNoteId + 1) % NOTES_COUNT;
+        currentOctave = notes[currentNoteId][0];
+        currentNote = notes[currentNoteId][1];
+        */
 
-        Serial.print("currentOctave: ");
-        Serial.print(currentOctave);
-        Serial.print(" currentNote: ");
-        Serial.print(currentNote);
-        Serial.println();
+        keyPressStartTimes[currentOctave][currentNote] = now;
     }
 
-    //delay(1);
+    delay(1);
 }
 
-float SimulateKeyMotion(uint32_t start)
+float SimulateKeyMotionVoltage(uint32_t start)
 {
-    uint32_t now = millis() - start;
-    if (now < 0) {
-        return 0.0f;
-    }
-    else if (now < 20) {
+    uint32_t delay = millis() - start;
+    if (delay < 10) {
         return 3.3f / 2.0f;
     }
-    else if (now < 30) {
+    else if (delay < 15) {
         return 3.3f;
     }
-    else if (now < 50) {
+    else if (delay < 100) {
         return 3.3f / 2.0f;
     }
     else {

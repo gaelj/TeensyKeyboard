@@ -31,11 +31,11 @@ void KeyboardKeyClass::Init(int octave, int note, AudioSynthWaveform* waveForm, 
 
     // Initialise envelope
     Envelope->delay(0.0f);
-    Envelope->attack(10.0f);
+    Envelope->attack(8.0f);
     Envelope->hold(0.0f);
-    Envelope->decay(2500.0f);
+    Envelope->decay(2000.0f);
     Envelope->sustain(0.0f);
-    Envelope->release(550.0f);
+    Envelope->release(500.0f);
 }
 
 bool KeyboardKeyClass::IsValid()
@@ -52,6 +52,20 @@ void KeyboardKeyClass::SetInputVoltage(float voltage, long now)
     if (keyState == newState)
         return;
 
+    Serial.print("Note: Octave=");
+    Serial.print(Octave);
+    Serial.print("\tNote=");
+    Serial.print(Note);
+    Serial.print("\tFreq=");
+    Serial.print(frequency);
+    Serial.print("\tState=");
+    Serial.print(newState);
+    Serial.print("\tVelocity=");
+    Serial.print(velocity);
+    Serial.print("\tVoltage=");
+    Serial.print(voltage);
+    Serial.println();
+
     switch (newState) {
         case Pressing:
             StartPressingTimestamp = now;
@@ -61,19 +75,6 @@ void KeyboardKeyClass::SetInputVoltage(float voltage, long now)
             velocity = GetVelocityByTimespan(EndPressingTimestamp - StartPressingTimestamp);
             WaveForm->amplitude(velocity);
             Envelope->noteOn();
-
-            Serial.print("Note ON: Octave=");
-            Serial.print(Octave);
-            Serial.print("\tNote=");
-            Serial.print(Note);
-            Serial.print("\tFreq=");
-            Serial.print(frequency);
-            Serial.print("\tState=");
-            Serial.print(newState);
-            Serial.print("\tVelocity=");
-            Serial.print(velocity);
-            Serial.println();
-
             break;
         case Unpressed:
             if (!sustainActive) {
