@@ -122,8 +122,6 @@ void setup()
         digitalWrite(MuxAddressPins[bit], LOW);
     }
 
-    delay(5000);
-
     // Initialise key objects
     for (uint octave = 0; octave < OCTAVES_CNT; octave++) {
         for (uint note = 0; note < NOTES_PER_OCTAVE; note++) {
@@ -135,10 +133,10 @@ void setup()
     
     // Initialise mixer objects
     for (uint m = 0; m < MIXER_CNT; m++) {
-        Mixers[m]->gain(0, 0.5f);
-        Mixers[m]->gain(1, 0.5f);
-        Mixers[m]->gain(2, 0.5f);
-        Mixers[m]->gain(3, 0.5f);
+        Mixers[m]->gain(0, 0.3f);
+        Mixers[m]->gain(1, 0.3f);
+        Mixers[m]->gain(2, 0.3f);
+        Mixers[m]->gain(3, 0.3f);
     }
 
     audioShield.enable();
@@ -155,46 +153,6 @@ uint32_t keyPressStartTimes[OCTAVES_CNT][NOTES_PER_OCTAVE] = {
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-};
-
-#define NOTES_COUNT 36
-uint notes[NOTES_COUNT][2] = {
-    { 0, 0 },
-    { 2, 2 },
-    { 1, 4 },
-    { 3, 5 },
-    { 4, 7 },
-    { 1, 9 },
-    { 2, 11 },
-    { 0, 0 },
-    { 0, 2 },
-    { 0, 4 },
-    { 0, 5 },
-    { 1, 7 },
-    { 1, 9 },
-    { 1, 11 },
-    { 1, 0 },
-    { 1, 2 },
-    { 1, 4 },
-    { 1, 5 },
-    { 1, 7 },
-    { 1, 9 },
-    { 1, 11 },
-    { 3, 0 },
-    { 3, 2 },
-    { 3, 4 },
-    { 3, 5 },
-    { 3, 7 },
-    { 3, 9 },
-    { 3, 11 },
-    { 4, 0 },
-    { 4, 2 },
-    { 4, 4 },
-    { 4, 5 },
-    { 4, 7 },
-    { 4, 9 },
-    { 4, 11 },
-    { 5, 0 },
 };
 
 int currentNoteId = 0;
@@ -222,13 +180,14 @@ void loop()
     uint32_t now = millis();
 
     // press next key
-    if ((now - lastNoteStart) > 200) {
+    if ((now - lastNoteStart) > 50) {
         lastNoteStart = now;
 
         // skip the last octave except for the first key
         if (currentOctave == OCTAVES_CNT - 1 && currentNote == 0) {
             currentNote = NOTES_PER_OCTAVE - 1;
         }
+
         if (currentNote == 4 || currentNote == 11)
             currentNote = (currentNote + 1) % NOTES_PER_OCTAVE;
         else
@@ -236,12 +195,6 @@ void loop()
 
         if (currentNote == 0)
             currentOctave = (currentOctave + 1) % OCTAVES_CNT;
-
-        /*
-        currentNoteId = (currentNoteId + 1) % NOTES_COUNT;
-        currentOctave = notes[currentNoteId][0];
-        currentNote = notes[currentNoteId][1];
-        */
 
         keyPressStartTimes[currentOctave][currentNote] = now;
     }
