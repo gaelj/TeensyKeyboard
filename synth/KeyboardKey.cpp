@@ -9,12 +9,10 @@
 
 #include "KeyboardKey.h"
 
-void KeyboardKeyClass::Init(int octave, int note, AudioSynthWaveform* waveForm, AudioEffectEnvelope* envelope)
+void KeyboardKeyClass::Init(int octave, int note, AudioMixer4* mixer, int mixerInputNumber)
 {
     Octave = octave;
     Note = note;
-    WaveForm = waveForm;
-    Envelope = envelope;
 
     frequency = GetFrequency(octave, note);
     keyState = Unpressed;
@@ -25,7 +23,10 @@ void KeyboardKeyClass::Init(int octave, int note, AudioSynthWaveform* waveForm, 
 
     velocity = 0;
 
-    if (!IsValid()) return;
+    WaveForm = new AudioSynthWaveform();
+    Envelope = new AudioEffectEnvelope();
+    PatchCord1 = new AudioConnection(*WaveForm, *Envelope);
+    PatchCordToMixer = new AudioConnection(*Envelope, 0, *mixer, mixerInputNumber);
 
     WaveForm->begin(0, frequency, WAVEFORM_TRIANGLE);
 

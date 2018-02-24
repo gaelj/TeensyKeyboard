@@ -4,6 +4,10 @@
 #define _KEYBOARDKEY_h
 
 #include "arduino.h"
+#include <Audio.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <SerialFlash.h>
 #include "synth_waveform.h"
 #include "effect_envelope.h"
 
@@ -34,15 +38,18 @@ protected:
     KeyboardKeyStates GetKeyStateByVoltage(float voltage);
     float GetVelocityByTimespan(long timeSpan);
 
+    AudioSynthWaveform*      WaveForm;
+    AudioEffectEnvelope*     Envelope;
+    AudioConnection*         PatchCord1;
+    AudioConnection*         PatchCordToMixer;
+
 public:
-    void Init(int octave, int note, AudioSynthWaveform* waveForm, AudioEffectEnvelope* envelope);
+    void Init(int octave, int note, AudioMixer4* mixer, int mixerInputNumber);
     bool IsValid();
     void SetInputVoltage(float voltage, long now);
     int Octave;
     int Note;
     KeyboardKeyStates keyState;
-    AudioEffectEnvelope* Envelope;
-    AudioSynthWaveform* WaveForm;
 
     float frequency;
     float velocity;
