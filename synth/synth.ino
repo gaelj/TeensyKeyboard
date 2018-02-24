@@ -146,14 +146,6 @@ void setup()
 uint currentOctave = 0;
 uint currentNote = 0;
 uint32_t lastNoteStart;
-uint32_t keyPressStartTimes[OCTAVES_CNT][NOTES_PER_OCTAVE] = {
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-};
 
 int currentNoteId = 0;
  
@@ -170,10 +162,8 @@ void loop()
         delayMicroseconds(1); // leave the multiplexer some time to switch (~500ns @3.3V)
 
         for (uint octave = 0; octave < OCTAVES_CNT; octave++) {
-            if (Keys[octave][note].IsValid()) {
-                //Keys[octave][key].SetInputVoltage(analogInPins[octave], millis());
-                Keys[octave][note].SetInputVoltage(SimulateKeyMotionVoltage(keyPressStartTimes[octave][note]), millis());
-            }
+            //Keys[octave][key].SetInputVoltage(analogInPins[octave], millis());
+            Keys[octave][note].SimulateKeyMotion();
         }
     }
 
@@ -196,25 +186,8 @@ void loop()
         if (currentNote == 0)
             currentOctave = (currentOctave + 1) % OCTAVES_CNT;
 
-        keyPressStartTimes[currentOctave][currentNote] = now;
+        Keys[currentOctave][currentNote].KeyPressStartTime = now;
     }
 
     delay(1);
-}
-
-float SimulateKeyMotionVoltage(uint32_t start)
-{
-    uint32_t delay = millis() - start;
-    if (delay < 10) {
-        return 3.3f / 2.0f;
-    }
-    else if (delay < 15) {
-        return 3.3f;
-    }
-    else if (delay < 100) {
-        return 3.3f / 2.0f;
-    }
-    else {
-        return 0.0f;
-    }
 }

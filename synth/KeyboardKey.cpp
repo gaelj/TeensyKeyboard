@@ -110,3 +110,25 @@ float KeyboardKeyClass::GetFrequency(int octave, int note)
     float n = note + (octave * NOTES_PER_OCTAVE);
     return 440.0f * pow(2.0f, (n - (float)A440_KEY_NUMBER) / (float)NOTES_PER_OCTAVE);
 }
+
+float KeyboardKeyClass::SimulateKeyMotionVoltage(uint32_t start)
+{
+    uint32_t delay = millis() - start;
+    if (delay < 10) {
+        return 3.3f / 2.0f;
+    }
+    else if (delay < 15) {
+        return 3.3f;
+    }
+    else if (delay < 100) {
+        return 3.3f / 2.0f;
+    }
+    else {
+        return 0.0f;
+    }
+}
+
+void KeyboardKeyClass::SimulateKeyMotion()
+{
+    SetInputVoltage(SimulateKeyMotionVoltage(KeyPressStartTime), millis());
+}

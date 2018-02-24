@@ -37,6 +37,7 @@ protected:
 
     KeyboardKeyStates GetKeyStateByVoltage(float voltage);
     float GetVelocityByTimespan(long timeSpan);
+    float SimulateKeyMotionVoltage(uint32_t start);
 
     AudioSynthWaveform*      WaveForm;
     AudioEffectEnvelope*     Envelope;
@@ -47,6 +48,7 @@ public:
     void Init(int octave, int note, AudioMixer4* mixer, int mixerInputNumber);
     bool IsValid();
     void SetInputVoltage(float voltage, long now);
+    void SimulateKeyMotion();
     int Octave;
     int Note;
     KeyboardKeyStates keyState;
@@ -56,6 +58,8 @@ public:
     bool sustainActive;
 
     static float GetFrequency(int octave, int note);
+
+    uint32_t KeyPressStartTime;
 };
 
 #endif
