@@ -4,6 +4,8 @@
 #include <SPI.h>
 #include <SerialFlash.h>
 
+KeyboardKeyClass Keys[OCTAVES_CNT][NOTES_PER_OCTAVE];
+
 // GUItool: begin automatically generated code
 AudioMixer4              mixer1;         //xy=1304.9259643554688,227.74080657958984
 AudioMixer4              mixer2;         //xy=1304.9259643554688,306.74080657958984
@@ -26,6 +28,7 @@ AudioMixer4              mixer15;        //xy=1326.9259643554688,2299.7408065795
 AudioMixer4              mixer16;        //xy=1325.9259643554688,2368.74080657959
 AudioMixer4              mixer2_4;        //xy=1518.9259643554688,2243.74080657959
 AudioMixer4              mixer3_1;        //xy=1778.9259643554688,1363.7408065795898
+AudioEffectReverb        reverb1;
 AudioOutputI2S           i2s1;           //xy=1952.5927734375,1364.1853332519531
 
 AudioConnection          patchCord125(mixer1, 0, mixer2_1, 0);
@@ -53,12 +56,12 @@ AudioConnection          patchCord142(mixer2_3, 0, mixer3_1, 2);
 AudioConnection          patchCord140(mixer2_2, 0, mixer3_1, 1);
 AudioConnection          patchCord141(mixer2_4, 0, mixer3_1, 3);
 
+//AudioConnection          patchCord145(mixer3_1, 0, reverb1, 0);
+
 AudioConnection          patchCord143(mixer3_1, 0, i2s1, 0);
 AudioConnection          patchCord144(mixer3_1, 0, i2s1, 1);
 AudioControlSGTL5000     audioShield;    //xy=2095.148193359375,1364.2963562011719
 // GUItool: end automatically generated code
-
-
 
 #define MIXER_CNT   21
 AudioMixer4* Mixers[MIXER_CNT] = {
@@ -103,12 +106,10 @@ AudioMixer4* Mixers[MIXER_CNT] = {
 int MuxAddressPins[ADDR_PIN_CNT] = { MUX_ADDR_0, MUX_ADDR_1, MUX_ADDR_2, MUX_ADDR_3 };
 int analogInPins[OCTAVES_CNT] = { AI_OCT_1, AI_OCT_2, AI_OCT_3, AI_OCT_4, AI_OCT_5, AI_OCT_6 };
 
-KeyboardKeyClass Keys[OCTAVES_CNT][NOTES_PER_OCTAVE];
-
 void setup()
 {
     // Initialise audio
-    AudioMemory(OCTAVES_CNT * NOTES_PER_OCTAVE);
+    AudioMemory(61);
 
     Serial.begin(115200);
     delay(500);
@@ -141,6 +142,8 @@ void setup()
 
     audioShield.enable();
     audioShield.volume(2.0f);
+
+    reverb1.reverbTime(0.0f);
 }
 
 uint currentOctave = 0;
@@ -162,7 +165,8 @@ void loop()
         delayMicroseconds(1); // leave the multiplexer some time to switch (~500ns @3.3V)
 
         for (uint octave = 0; octave < OCTAVES_CNT; octave++) {
-            //Keys[octave][key].SetInputVoltage(analogInPins[octave], millis());
+            //int voltage = analogRead(analogInPins[octave]);
+            //Keys[octave][note].SetInputVoltage(voltage, millis());
             Keys[octave][note].SimulateKeyMotion();
         }
     }
@@ -170,7 +174,7 @@ void loop()
     uint32_t now = millis();
 
     // press next key
-    if ((now - lastNoteStart) > 50) {
+    if ((now - lastNoteStart) > 100) {
         lastNoteStart = now;
 
         // skip the last octave except for the first key
@@ -190,4 +194,6 @@ void loop()
     }
 
     delay(1);
+    Serial.print("AudioMemoryUsageMax: ");
+    Serial.println(AudioMemoryUsageMax());
 }

@@ -9,6 +9,17 @@
 
 #include "KeyboardKey.h"
 
+KeyboardKeyClass::KeyboardKeyClass()
+{
+    // Define the synthesizer modules
+    WaveForm1 = new AudioSynthWaveform();
+    //Chorus1 = new AudioEffectChorus();
+    Envelope1 = new AudioEffectEnvelope();
+
+    PatchCord1 = new AudioConnection(*WaveForm1, *Envelope1);
+    //PatchCord2 = new AudioConnection(*Chorus1, *Envelope1);
+}
+
 void KeyboardKeyClass::Init(int octave, int note, AudioMixer4* mixer, int mixerInputNumber)
 {
     Octave = octave;
@@ -23,31 +34,32 @@ void KeyboardKeyClass::Init(int octave, int note, AudioMixer4* mixer, int mixerI
 
     velocity = 0;
 
-    WaveForm = new AudioSynthWaveform();
-    Envelope = new AudioEffectEnvelope();
-    PatchCord1 = new AudioConnection(*WaveForm, *Envelope);
-    PatchCordToMixer = new AudioConnection(*Envelope, 0, *mixer, mixerInputNumber);
+    PatchCordToMixer = new AudioConnection(*Envelope1, 0, *mixer, mixerInputNumber);
+    
+    // Initialise the synthesizer modules
+    WaveForm1->begin(0, frequency, WAVEFORM_TRIANGLE);
 
-    WaveForm->begin(0, frequency, WAVEFORM_TRIANGLE);
+    Envelope1->delay(0.0f);
+    Envelope1->attack(8.0f);
+    Envelope1->hold(0.0f);
+    Envelope1->decay(2000.0f);
+    Envelope1->sustain(0.0f);
+    Envelope1->release(500.0f);
 
-    // Initialise envelope
-    Envelope->delay(0.0f);
-    Envelope->attack(8.0f);
-    Envelope->hold(0.0f);
-    Envelope->decay(2000.0f);
-    Envelope->sustain(0.0f);
-    Envelope->release(500.0f);
+    //Chorus1->voices(5);
+    //Chorus1->begin();
 }
 
 bool KeyboardKeyClass::IsValid()
 {
-    return WaveForm != 0 && Envelope != 0;
+    return WaveForm1 != 0;
 }
 
 // Set keyState and velocity values, and press timestamps
-void KeyboardKeyClass::SetInputVoltage(float voltage, long now)
+void KeyboardKeyClass::SetInputVoltage(int voltage, long now)
 {
-    if (!IsValid()) return;
+    if (!IsValid())
+        return;
 
     KeyboardKeyStates newState = GetKeyStateByVoltage(voltage);
     if (keyState == newState)
@@ -74,12 +86,12 @@ void KeyboardKeyClass::SetInputVoltage(float voltage, long now)
         case Pressed:
             EndPressingTimestamp = now;
             velocity = GetVelocityByTimespan(EndPressingTimestamp - StartPressingTimestamp);
-            WaveForm->amplitude(velocity);
-            Envelope->noteOn();
+            WaveForm1->amplitude(velocity);
+            Envelope1->noteOn();
             break;
         case Unpressed:
             if (!sustainActive) {
-                Envelope->noteOff();
+                Envelope1->noteOff();
             }
             break;
     }
@@ -88,7 +100,7 @@ void KeyboardKeyClass::SetInputVoltage(float voltage, long now)
 }
 
 // Get the pressed state of they key according to the sensed voltage
-KeyboardKeyStates KeyboardKeyClass::GetKeyStateByVoltage(float voltage)
+KeyboardKeyStates KeyboardKeyClass::GetKeyStateByVoltage(int voltage)
 {
     if (voltage < V_UNPRESSED + V_TOLERANCE)
         return Unpressed;
@@ -111,24 +123,26 @@ float KeyboardKeyClass::GetFrequency(int octave, int note)
     return 440.0f * pow(2.0f, (n - (float)A440_KEY_NUMBER) / (float)NOTES_PER_OCTAVE);
 }
 
-float KeyboardKeyClass::SimulateKeyMotionVoltage(uint32_t start)
+int KeyboardKeyClass::SimulateKeyMotionVoltage(uint32_t start)
 {
     uint32_t delay = millis() - start;
     if (delay < 10) {
-        return 3.3f / 2.0f;
+        return V_PRESSED / 2;
     }
     else if (delay < 15) {
-        return 3.3f;
+        return V_PRESSED;
     }
     else if (delay < 100) {
-        return 3.3f / 2.0f;
+        return V_PRESSED / 2;
     }
     else {
-        return 0.0f;
+        return V_UNPRESSED;
     }
 }
 
 void KeyboardKeyClass::SimulateKeyMotion()
 {
-    SetInputVoltage(SimulateKeyMotionVoltage(KeyPressStartTime), millis());
+    SetInputVoltage(
+        SimulateKeyMotionVoltage(KeyPressStartTime),
+        millis());
 }
