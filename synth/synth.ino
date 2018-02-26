@@ -1,8 +1,16 @@
-#include "KeyboardKey.h"
 #include <Audio.h>
+#include <AudioStream.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <SerialFlash.h>
+//#include <SerialFlash.h>
+#include <TFT_ILI93XX.h>
+#include <Encoder.h>
+#include <Bounce2.h>
+
+#include "KeyboardKey.h"
+#include "SynthParameters.h"
+#include "UserMenuItem.h"
+#include "UserMenu.h"
 
 KeyboardKeyClass Keys[OCTAVES_CNT][NOTES_PER_OCTAVE];
 
@@ -89,30 +97,53 @@ AudioMixer4* Mixers[MIXER_CNT] = {
 };
 
 // Analog multiplexed inputs, 1 / octave
-#define AI_OCT_1    A10 // = DIO 22
-#define AI_OCT_2    A11 // = DIO 21
-#define AI_OCT_3    A19 // = DIO 38 
-#define AI_OCT_4    A20 // = DIO 39
-#define AI_OCT_5    A21 // not a DIO
-#define AI_OCT_6    A22 // not a DIO
+#define AI_OCT_1        A10 // = DIO 22
+#define AI_OCT_2        A11 // = DIO 21
+#define AI_OCT_3        A19 // = DIO 38 
+#define AI_OCT_4        A20 // = DIO 39
+#define AI_OCT_5        A21 // not a DIO
+#define AI_OCT_6        A22 // not a DIO
 
 // Multiplexer address outputs
 #define ADDR_PIN_CNT    4
-#define MUX_ADDR_0     24
-#define MUX_ADDR_1     25
-#define MUX_ADDR_2     26
-#define MUX_ADDR_3     27
+#define MUX_ADDR_0      24
+#define MUX_ADDR_1      25
+#define MUX_ADDR_2      26
+#define MUX_ADDR_3      27
 
 int MuxAddressPins[ADDR_PIN_CNT] = { MUX_ADDR_0, MUX_ADDR_1, MUX_ADDR_2, MUX_ADDR_3 };
 int analogInPins[OCTAVES_CNT] = { AI_OCT_1, AI_OCT_2, AI_OCT_3, AI_OCT_4, AI_OCT_5, AI_OCT_6 };
 
+// Rotary encoder
+#define ROT_PUSH        47
+#define ROT_INC         48
+#define ROT_DEC         49
+
+// Display
+#define TFT_DC      54
+#define TFT_CS      43
+#define TFT_MOSI    44
+#define TFT_MISO    45
+#define TFT_SCK     46
+#define TFT_RST     51
+
+Bounce Debouncer1 = Bounce();
+
+TFT_ILI93XX tft = TFT_ILI93XX(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK);
+
+SynthParametersClass SynthParameters = SynthParametersClass();
+UserMenuClass Menu = UserMenuClass(&tft, &SynthParameters);
+
+long prevEncoderPosition = 0;
+int EncoderBuffer[4] = { 0, 0, 0, 0 };
+int prevInc = 1;
+int prevDec = 1;
+
 void setup()
 {
-    // Initialise audio
-    AudioMemory(61);
-
-    Serial.begin(115200);
-    delay(500);
+    pinMode(ROT_PUSH, INPUT_PULLUP);
+    pinMode(ROT_INC, INPUT_PULLUP);
+    pinMode(ROT_DEC, INPUT_PULLUP);
 
     for (uint ai = 0; ai < OCTAVES_CNT; ai++)
         pinMode(analogInPins[ai], INPUT);
@@ -123,15 +154,48 @@ void setup()
         digitalWrite(MuxAddressPins[bit], LOW);
     }
 
+    AudioMemory(61);
+
+    //the following it's mainly for Teensy
+    //it will help you to understand if you have chosen the
+    //wrong combination of pins!
+    while (true) {
+        Serial.println("Beginning...");
+        tft.begin();
+        Serial.println("Begin done !!!");
+        uint8_t errorCode = tft.getErrorCode();
+        if (errorCode != 0) {
+            Serial.print("Init error! ");
+            if (bitRead(errorCode, 0)) Serial.print("MOSI or SCLK pin mismatch!\n");
+            if (bitRead(errorCode, 1)) Serial.print("CS or DC pin mismatch!\n");
+            delay(1000);
+        }
+        else {
+            Serial.print("No init errors");
+            break;
+        }
+    }
+    tft.setRotation(1);
+    Serial.println();
+
+    Menu.ShowPage(Startup);
+    Serial.begin(115200);
+    delay(500);
+
+    Debouncer1.attach(ROT_PUSH);
+    Debouncer1.interval(5); // interval in ms
+
     // Initialise key objects
     for (uint octave = 0; octave < OCTAVES_CNT; octave++) {
         for (uint note = 0; note < NOTES_PER_OCTAVE; note++) {
             int noteNumber = (octave * NOTES_PER_OCTAVE) + note;
-            Keys[octave][note].Init(octave, note, Mixers[noteNumber / 4], noteNumber % 4);
-            Keys[octave][note].sustainActive = false;
+            Keys[octave][note].Init(octave, note,
+                Mixers[noteNumber / 4],
+                noteNumber % 4,
+                &SynthParameters);
         }
     }
-    
+
     // Initialise mixer objects
     for (uint m = 0; m < MIXER_CNT; m++) {
         Mixers[m]->gain(0, 0.3f);
@@ -140,18 +204,20 @@ void setup()
         Mixers[m]->gain(3, 0.3f);
     }
 
+    // Initialise audioChangeRow
     audioShield.enable();
     audioShield.volume(2.0f);
 
     reverb1.reverbTime(0.0f);
+
+    Menu.ShowPage(MainConfig);
 }
 
 uint currentOctave = 0;
 uint currentNote = 0;
 uint32_t lastNoteStart;
-
 int currentNoteId = 0;
- 
+
 void loop()
 {
     // Scan the keyboard
@@ -167,7 +233,9 @@ void loop()
         for (uint octave = 0; octave < OCTAVES_CNT; octave++) {
             //int voltage = analogRead(analogInPins[octave]);
             //Keys[octave][note].SetInputVoltage(voltage, millis());
-            Keys[octave][note].SimulateKeyMotion();
+
+            if (SynthParameters.PlayDemo)
+                Keys[octave][note].SimulateKeyMotion();
         }
     }
 
@@ -193,7 +261,74 @@ void loop()
         Keys[currentOctave][currentNote].KeyPressStartTime = now;
     }
 
-    delay(1);
-    Serial.print("AudioMemoryUsageMax: ");
-    Serial.println(AudioMemoryUsageMax());
+    //Serial.print("AudioMemoryUsageMax: ");
+    //Serial.println(AudioMemoryUsageMax());
+
+    Debouncer1.update();
+    int readValue = Debouncer1.read();
+    if (Debouncer1.fallingEdge()) {
+        Serial.print("ROT PUSH: ");
+        Serial.println(readValue);
+
+        Menu.PressEncoder();
+    }
+
+    bool encoderChanged = false;
+    int inc = digitalRead(ROT_INC);
+    int dec = digitalRead(ROT_DEC);
+
+    if (prevInc != inc) {
+        prevInc = inc;
+        EncoderBuffer[3] = EncoderBuffer[2];
+        EncoderBuffer[2] = EncoderBuffer[1];
+        EncoderBuffer[1] = EncoderBuffer[0];
+        EncoderBuffer[0] = inc == 0 ? 1 : 2;
+        encoderChanged = true;
+    }
+    if (prevDec != dec) {
+        prevDec = dec;
+        EncoderBuffer[3] = EncoderBuffer[2];
+        EncoderBuffer[2] = EncoderBuffer[1];
+        EncoderBuffer[1] = EncoderBuffer[0];
+        EncoderBuffer[0] = dec == 0 ? 3 : 4;
+        encoderChanged = true;
+    }
+
+    if (encoderChanged) {
+
+        /*
+        Serial.print(EncoderBuffer[0]);
+        Serial.print(" ");
+        Serial.print(EncoderBuffer[1]);
+        Serial.print(" ");
+        Serial.print(EncoderBuffer[2]);
+        Serial.print(" ");
+        Serial.println(EncoderBuffer[3]);
+        */
+
+        int newPosition = prevEncoderPosition;
+
+
+        if (EncoderBuffer[0] == 4 &&
+            EncoderBuffer[1] == 1 &&
+            EncoderBuffer[2] == 3 &&
+            EncoderBuffer[3] == 2)
+            newPosition++;
+
+        else if (EncoderBuffer[0] == 4 &&
+                 EncoderBuffer[1] == 2 &&
+                 EncoderBuffer[2] == 3 &&
+                 EncoderBuffer[3] == 1)
+            newPosition--;
+
+        if (prevEncoderPosition != newPosition) {
+        
+            Serial.print("ROT POS: ");
+            Serial.println(newPosition);
+
+            Menu.RotateEncoder(newPosition - prevEncoderPosition);
+
+            prevEncoderPosition = newPosition;
+        }
+    }
 }

@@ -3,13 +3,15 @@
 #ifndef _KEYBOARDKEY_h
 #define _KEYBOARDKEY_h
 
-#include "arduino.h"
+#include <arduino.h>
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SerialFlash.h>
-#include "synth_waveform.h"
-#include "effect_envelope.h"
+#include <synth_waveform.h>
+#include <effect_envelope.h>
+
+#include "SynthParameters.h"
 
 // Keyboard definition
 #define OCTAVES_CNT          6
@@ -39,18 +41,18 @@ protected:
     float GetVelocityByTimespan(long timeSpan);
     int SimulateKeyMotionVoltage(uint32_t start);
 
+    SynthParametersClass* params;
+
     AudioSynthWaveform*      WaveForm1;
     AudioEffectChorus*       Chorus1;
     AudioEffectEnvelope*     Envelope1;
-    AudioEffectReverb*       Reverb1;
     AudioConnection*         PatchCord1;
     AudioConnection*         PatchCord2;
-    AudioConnection*         PatchCord3;
     AudioConnection*         PatchCordToMixer;
 
 public:
     KeyboardKeyClass();
-    void Init(int octave, int note, AudioMixer4* mixer, int mixerInputNumber);
+    void Init(int octave, int note, AudioMixer4* mixer, int mixerInputNumber, SynthParametersClass* _params);
     bool IsValid();
     void SetInputVoltage(int voltage, long now);
     void SimulateKeyMotion();
@@ -60,7 +62,6 @@ public:
 
     float frequency;
     float velocity;
-    bool sustainActive;
 
     static float GetFrequency(int octave, int note);
 

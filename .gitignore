@@ -1,0 +1,10 @@
+
+synth/.vs/Synth/v15/.suo
+synth/.vs/Synth/v15/.suo
+synth/__vm/Compile.vmps.xml
+synth/__vm/Configuration.Debug.vmps.xml
+*.user
+*.vcxproj
+synth/synth.vcxproj.filters
+synth/synth.vcxproj
+synth/synth.vcxproj.user

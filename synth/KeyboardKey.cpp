@@ -20,14 +20,15 @@ KeyboardKeyClass::KeyboardKeyClass()
     //PatchCord2 = new AudioConnection(*Chorus1, *Envelope1);
 }
 
-void KeyboardKeyClass::Init(int octave, int note, AudioMixer4* mixer, int mixerInputNumber)
+void KeyboardKeyClass::Init(int octave, int note, AudioMixer4* mixer, int mixerInputNumber,
+    SynthParametersClass* _params)
 {
+    params = _params;
     Octave = octave;
     Note = note;
 
     frequency = GetFrequency(octave, note);
     keyState = Unpressed;
-    sustainActive = false;
 
     StartPressingTimestamp = 0;
     EndPressingTimestamp = 0;
@@ -37,14 +38,7 @@ void KeyboardKeyClass::Init(int octave, int note, AudioMixer4* mixer, int mixerI
     PatchCordToMixer = new AudioConnection(*Envelope1, 0, *mixer, mixerInputNumber);
     
     // Initialise the synthesizer modules
-    WaveForm1->begin(0, frequency, WAVEFORM_TRIANGLE);
-
-    Envelope1->delay(0.0f);
-    Envelope1->attack(8.0f);
-    Envelope1->hold(0.0f);
-    Envelope1->decay(2000.0f);
-    Envelope1->sustain(0.0f);
-    Envelope1->release(500.0f);
+    WaveForm1->begin(0, frequency, WAVEFORM_SAWTOOTH_REVERSE);
 
     //Chorus1->voices(5);
     //Chorus1->begin();
@@ -64,7 +58,7 @@ void KeyboardKeyClass::SetInputVoltage(int voltage, long now)
     KeyboardKeyStates newState = GetKeyStateByVoltage(voltage);
     if (keyState == newState)
         return;
-
+    /*
     Serial.print("Note: Octave=");
     Serial.print(Octave);
     Serial.print("\tNote=");
@@ -78,6 +72,7 @@ void KeyboardKeyClass::SetInputVoltage(int voltage, long now)
     Serial.print("\tVoltage=");
     Serial.print(voltage);
     Serial.println();
+    */
 
     switch (newState) {
         case Pressing:
@@ -87,10 +82,18 @@ void KeyboardKeyClass::SetInputVoltage(int voltage, long now)
             EndPressingTimestamp = now;
             velocity = GetVelocityByTimespan(EndPressingTimestamp - StartPressingTimestamp);
             WaveForm1->amplitude(velocity);
+            
+            Envelope1->delay(params->EnvelopeDelay);
+            Envelope1->attack(params->EnvelopeAttack);
+            Envelope1->hold(params->EnvelopeHold);
+            Envelope1->decay(params->EnvelopeDecay);
+            Envelope1->sustain(params->EnvelopeSustain);
+            Envelope1->release(params->EnvelopeRelease);
+
             Envelope1->noteOn();
             break;
         case Unpressed:
-            if (!sustainActive) {
+            if (!params->SustainActive) {
                 Envelope1->noteOff();
             }
             break;
