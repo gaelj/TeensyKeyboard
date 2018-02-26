@@ -241,8 +241,7 @@ void loop()
             //int voltage = analogRead(analogInPins[octave]);
             //Keys[octave][note].SetInputVoltage(voltage, millis());
 
-            if (SynthParameters.PlayDemo)
-                Keys[octave][note].SimulateKeyMotion();
+            Keys[octave][note].SimulateKeyMotion();
         }
     }
 

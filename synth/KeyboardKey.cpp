@@ -76,9 +76,11 @@ void KeyboardKeyClass::SetInputVoltage(int voltage, long now)
 
     switch (newState) {
         case Pressing:
+            if (!params->PlayDemo) return;
             StartPressingTimestamp = now;
             break;
         case Pressed:
+            if (!params->PlayDemo) return;
             EndPressingTimestamp = now;
             velocity = GetVelocityByTimespan(EndPressingTimestamp - StartPressingTimestamp);
             WaveForm1->amplitude(velocity);
