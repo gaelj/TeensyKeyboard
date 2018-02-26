@@ -271,13 +271,13 @@ void loop()
     if (encoderValue != encoderValueLast) {
         Menu.RotateEncoder(encoderValue - encoderValueLast);
         encoderValueLast = encoderValue;
-        Serial.print("Encoder Value: ");
-        Serial.println(encoderValue);
+        //Serial.print("Encoder Value: ");
+        //Serial.println(encoderValue);
     }
 
     ClickEncoder::Button b = encoder->getButton();
     if (b != ClickEncoder::Open) {
-        Serial.print("Button: ");
+        //Serial.print("Button: ");
         switch (b) {
             case ClickEncoder::Pressed: Serial.println(ClickEncoder::Pressed); break;
             case ClickEncoder::Held: Serial.println(ClickEncoder::Held); break;
@@ -285,10 +285,10 @@ void loop()
             case ClickEncoder::Clicked: Serial.println(ClickEncoder::Clicked);
                 Menu.PressEncoder(); break;
             case ClickEncoder::DoubleClicked:
-                Serial.println("ClickEncoder::DoubleClicked");
+                // Serial.println("ClickEncoder::DoubleClicked");
                 encoder->setAccelerationEnabled(!encoder->getAccelerationEnabled());
-                Serial.print("  Acceleration is ");
-                Serial.println((encoder->getAccelerationEnabled()) ? "enabled" : "disabled");
+                //Serial.print("  Acceleration is ");
+                //Serial.println((encoder->getAccelerationEnabled()) ? "enabled" : "disabled");
                 break;
         }
     }

@@ -15,10 +15,6 @@ UserMenuItemClass::UserMenuItemClass(TFT_ILI93XX* _tft, String itemName, int row
 
 void UserMenuItemClass::PrintMenuItem()
 {
-    /*
-    for (int i = 26 + 11 * Row; i < 26 + 11 * (Row + 1); i++)
-        tft->drawFastHLine(0, i, 320, WHITE);
-    */
     tft->setCursor(0, 0);
     for (int r = 0; r < Row + 2; r++)
         tft->println();
@@ -38,6 +34,8 @@ void UserMenuItemClass::PrintMenuItem()
 
     
     PrintValue();
+    tft->setTextColor(YELLOW, BLACK);
+    tft->print("     "); // dirty way to clear rest of line
 
     tft->println();
 }

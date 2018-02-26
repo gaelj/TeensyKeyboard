@@ -10,6 +10,8 @@
 #include "UserMenuItem.h"
 
 #include "Images\keyboard.c"
+#include "Images\backgroundHalf1.c"
+#include "Images\backgroundHalf2.c"
 
 #define RELEASE_VERSION 1.0f
 

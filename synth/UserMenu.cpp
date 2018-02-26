@@ -55,7 +55,9 @@ void UserMenuClass::ShowPage(MenuPages menuPage)
 {
     CurrentPage = menuPage;
 
-    tft->clearScreen();
+    //tft->clearScreen();
+    tft->drawImage(0, 0, &backgroundHalf1);
+    tft->drawImage(160, 0, &backgroundHalf2);
     tft->setTextColor(YELLOW);
     tft->setCursor(0, 0);
     tft->setTextScale(3);
