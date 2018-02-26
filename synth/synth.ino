@@ -4,8 +4,8 @@
 #include <SPI.h>
 //#include <SerialFlash.h>
 #include <TFT_ILI93XX.h>
-#include <Encoder.h>
-#include <Bounce2.h>
+#include <ClickEncoder.h>
+#include <TimerOne.h>
 
 #include "KeyboardKey.h"
 #include "SynthParameters.h"
@@ -127,20 +127,27 @@ int analogInPins[OCTAVES_CNT] = { AI_OCT_1, AI_OCT_2, AI_OCT_3, AI_OCT_4, AI_OCT
 #define TFT_SCK     46
 #define TFT_RST     51
 
-Bounce Debouncer1 = Bounce();
-
 TFT_ILI93XX tft = TFT_ILI93XX(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK);
 
 SynthParametersClass SynthParameters = SynthParametersClass();
 UserMenuClass Menu = UserMenuClass(&tft, &SynthParameters);
 
-long prevEncoderPosition = 0;
-int EncoderBuffer[4] = { 0, 0, 0, 0 };
-int prevInc = 1;
-int prevDec = 1;
+#define ENCODER_STEPS_PER_NOTCH     4
+ClickEncoder* encoder;
+int16_t encoderValueLast;
+int16_t encoderValue;
+
+void timerIsr() {
+    encoder->service();
+}
 
 void setup()
 {
+    encoder = new ClickEncoder(ROT_INC, ROT_DEC, ROT_PUSH, ENCODER_STEPS_PER_NOTCH);
+    Timer1.initialize(1000);
+    Timer1.attachInterrupt(timerIsr);
+    encoderValueLast = -1;
+
     pinMode(ROT_PUSH, INPUT_PULLUP);
     pinMode(ROT_INC, INPUT_PULLUP);
     pinMode(ROT_DEC, INPUT_PULLUP);
@@ -182,9 +189,6 @@ void setup()
     Serial.begin(115200);
     delay(500);
 
-    Debouncer1.attach(ROT_PUSH);
-    Debouncer1.interval(5); // interval in ms
-
     // Initialise key objects
     for (uint octave = 0; octave < OCTAVES_CNT; octave++) {
         for (uint note = 0; note < NOTES_PER_OCTAVE; note++) {
@@ -198,10 +202,10 @@ void setup()
 
     // Initialise mixer objects
     for (uint m = 0; m < MIXER_CNT; m++) {
-        Mixers[m]->gain(0, 0.3f);
-        Mixers[m]->gain(1, 0.3f);
-        Mixers[m]->gain(2, 0.3f);
-        Mixers[m]->gain(3, 0.3f);
+        Mixers[m]->gain(0, m < 16 ? 0.1f : 1);
+        Mixers[m]->gain(1, m < 16 ? 0.1f : 1);
+        Mixers[m]->gain(2, m < 16 ? 0.1f : 1);
+        Mixers[m]->gain(3, m < 16 ? 0.1f : 1);
     }
 
     // Initialise audioChangeRow
@@ -220,6 +224,9 @@ int currentNoteId = 0;
 
 void loop()
 {
+    //Serial.print("AudioMemoryUsageMax: ");
+    //Serial.println(AudioMemoryUsageMax());
+
     // Scan the keyboard
     for (uint note = 0; note < NOTES_PER_OCTAVE; note++) {
         // Write the note number binary value over the 4 multiplexer address lines
@@ -260,75 +267,30 @@ void loop()
 
         Keys[currentOctave][currentNote].KeyPressStartTime = now;
     }
+    encoderValue += encoder->getValue();
 
-    //Serial.print("AudioMemoryUsageMax: ");
-    //Serial.println(AudioMemoryUsageMax());
-
-    Debouncer1.update();
-    int readValue = Debouncer1.read();
-    if (Debouncer1.fallingEdge()) {
-        Serial.print("ROT PUSH: ");
-        Serial.println(readValue);
-
-        Menu.PressEncoder();
+    if (encoderValue != encoderValueLast) {
+        Menu.RotateEncoder(encoderValue - encoderValueLast);
+        encoderValueLast = encoderValue;
+        Serial.print("Encoder Value: ");
+        Serial.println(encoderValue);
     }
 
-    bool encoderChanged = false;
-    int inc = digitalRead(ROT_INC);
-    int dec = digitalRead(ROT_DEC);
-
-    if (prevInc != inc) {
-        prevInc = inc;
-        EncoderBuffer[3] = EncoderBuffer[2];
-        EncoderBuffer[2] = EncoderBuffer[1];
-        EncoderBuffer[1] = EncoderBuffer[0];
-        EncoderBuffer[0] = inc == 0 ? 1 : 2;
-        encoderChanged = true;
-    }
-    if (prevDec != dec) {
-        prevDec = dec;
-        EncoderBuffer[3] = EncoderBuffer[2];
-        EncoderBuffer[2] = EncoderBuffer[1];
-        EncoderBuffer[1] = EncoderBuffer[0];
-        EncoderBuffer[0] = dec == 0 ? 3 : 4;
-        encoderChanged = true;
-    }
-
-    if (encoderChanged) {
-
-        /*
-        Serial.print(EncoderBuffer[0]);
-        Serial.print(" ");
-        Serial.print(EncoderBuffer[1]);
-        Serial.print(" ");
-        Serial.print(EncoderBuffer[2]);
-        Serial.print(" ");
-        Serial.println(EncoderBuffer[3]);
-        */
-
-        int newPosition = prevEncoderPosition;
-
-
-        if (EncoderBuffer[0] == 4 &&
-            EncoderBuffer[1] == 1 &&
-            EncoderBuffer[2] == 3 &&
-            EncoderBuffer[3] == 2)
-            newPosition++;
-
-        else if (EncoderBuffer[0] == 4 &&
-                 EncoderBuffer[1] == 2 &&
-                 EncoderBuffer[2] == 3 &&
-                 EncoderBuffer[3] == 1)
-            newPosition--;
-
-        if (prevEncoderPosition != newPosition) {
-        
-            Serial.print("ROT POS: ");
-            Serial.println(newPosition);
-
-            Menu.RotateEncoder(newPosition - prevEncoderPosition);
-
-            prevEncoderPosition = newPosition;
+    ClickEncoder::Button b = encoder->getButton();
+    if (b != ClickEncoder::Open) {
+        Serial.print("Button: ");
+        switch (b) {
+            case ClickEncoder::Pressed: Serial.println(ClickEncoder::Pressed); break;
+            case ClickEncoder::Held: Serial.println(ClickEncoder::Held); break;
+            case ClickEncoder::Released: Serial.println(ClickEncoder::Released); break;
+            case ClickEncoder::Clicked: Serial.println(ClickEncoder::Clicked);
+                Menu.PressEncoder(); break;
+            case ClickEncoder::DoubleClicked:
+                Serial.println("ClickEncoder::DoubleClicked");
+                encoder->setAccelerationEnabled(!encoder->getAccelerationEnabled());
+                Serial.print("  Acceleration is ");
+                Serial.println((encoder->getAccelerationEnabled()) ? "enabled" : "disabled");
+                break;
         }
     }
 }
