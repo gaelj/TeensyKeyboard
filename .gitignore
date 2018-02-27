@@ -8,3 +8,7 @@ synth/__vm/Configuration.Debug.vmps.xml
 synth/synth.vcxproj.filters
 synth/synth.vcxproj
 synth/synth.vcxproj.user
+synth/synth.vcxproj.filters
+synth/synth.vcxproj.user
+synth/synth.vcxproj
+synth/.vs/Synth/v15/.suo
