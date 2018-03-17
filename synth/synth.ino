@@ -6,6 +6,7 @@
 #include <TFT_ILI93XX.h>
 #include <ClickEncoder.h>
 #include <TimerOne.h>
+#include <Adafruit_Trellis.h>
 
 #include "KeyboardKey.h"
 #include "SynthParameters.h"
@@ -127,6 +128,30 @@ int analogInPins[OCTAVES_CNT] = { AI_OCT_1, AI_OCT_2, AI_OCT_3, AI_OCT_4, AI_OCT
 #define TFT_SCK     46
 #define TFT_RST     51
 
+/*
+// i²c: Trellis
+#define PIN_SDA     56
+#define PIN_SCL     57
+#define PIN_I2CINT  55
+
+#define MOMENTARY 0
+#define LATCHING 1
+// set the mode here
+#define MODE LATCHING 
+
+Adafruit_Trellis matrix0 = Adafruit_Trellis();
+// Adafruit_Trellis matrix1 = Adafruit_Trellis();
+// Adafruit_Trellis matrix2 = Adafruit_Trellis();
+// Adafruit_Trellis matrix3 = Adafruit_Trellis();
+// up to 8 can be added
+
+Adafruit_TrellisSet trellis = Adafruit_TrellisSet(&matrix0);
+//Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0, &matrix1, &matrix2, &matrix3);
+
+#define NUMTRELLIS 1
+#define numKeys (NUMTRELLIS * 16)
+*/
+
 TFT_ILI93XX tft = TFT_ILI93XX(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK);
 
 SynthParametersClass SynthParameters = SynthParametersClass();
@@ -143,6 +168,34 @@ void timerIsr() {
 
 void setup()
 {
+    /*
+    // INT pin requires a pull-up
+    pinMode(PIN_SDA, OUTPUT);
+    pinMode(PIN_SCL, OUTPUT);
+    pinMode(PIN_I2CINT, OUTPUT);
+    digitalWrite(PIN_I2CINT, HIGH);
+
+    Wire.setSDA(PIN_SDA);
+    Wire.setSCL(PIN_SCL);
+
+    // begin() with the addresses of each panel in order
+    // I find it easiest if the addresses are in order
+    trellis.begin(0x70);  // only one
+    // trellis.begin(0x70, 0x71, 0x72, 0x73);  // or four!
+
+    // light up all the LEDs in order
+    for (uint8_t i = 0; i < numKeys; i++) {
+        trellis.setLED(i);
+        trellis.writeDisplay();
+        delay(50);
+    }
+    // then turn them off
+    for (uint8_t i = 0; i < numKeys; i++) {
+        trellis.clrLED(i);
+        trellis.writeDisplay();
+        delay(50);
+    }*/
+
     encoder = new ClickEncoder(ROT_INC, ROT_DEC, ROT_PUSH, ENCODER_STEPS_PER_NOTCH);
     Timer1.initialize(1000);
     Timer1.attachInterrupt(timerIsr);
@@ -224,6 +277,49 @@ int currentNoteId = 0;
 
 void loop()
 {
+    /*
+    delay(30); // 30ms delay is required, dont remove me! (trellis)
+
+    if (MODE == MOMENTARY) {
+        // If a button was just pressed or released...
+        if (trellis.readSwitches()) {
+            // go through every button
+            for (uint8_t i = 0; i < numKeys; i++) {
+                // if it was pressed, turn it on
+                if (trellis.justPressed(i)) {
+                    Serial.print("v"); Serial.println(i);
+                    trellis.setLED(i);
+                }
+                // if it was released, turn it off
+                if (trellis.justReleased(i)) {
+                    Serial.print("^"); Serial.println(i);
+                    trellis.clrLED(i);
+                }
+            }
+            // tell the trellis to set the LEDs we requested
+            trellis.writeDisplay();
+        }
+    }
+
+    if (MODE == LATCHING) {
+        // If a button was just pressed or released...
+        if (trellis.readSwitches()) {
+            // go through every button
+            for (uint8_t i = 0; i < numKeys; i++) {
+                // if it was pressed...
+                if (trellis.justPressed(i)) {
+                    Serial.print("v"); Serial.println(i);
+                    // Alternate the LED
+                    if (trellis.isLED(i))
+                        trellis.clrLED(i);
+                    else
+                        trellis.setLED(i);
+                }
+            }
+            // tell the trellis to set the LEDs we requested
+            trellis.writeDisplay();
+        }
+    }*/
     //Serial.print("AudioMemoryUsageMax: ");
     //Serial.println(AudioMemoryUsageMax());
 
@@ -279,17 +375,17 @@ void loop()
     if (b != ClickEncoder::Open) {
         //Serial.print("Button: ");
         switch (b) {
-            case ClickEncoder::Pressed: Serial.println(ClickEncoder::Pressed); break;
-            case ClickEncoder::Held: Serial.println(ClickEncoder::Held); break;
-            case ClickEncoder::Released: Serial.println(ClickEncoder::Released); break;
-            case ClickEncoder::Clicked: Serial.println(ClickEncoder::Clicked);
-                Menu.PressEncoder(); break;
-            case ClickEncoder::DoubleClicked:
-                // Serial.println("ClickEncoder::DoubleClicked");
-                encoder->setAccelerationEnabled(!encoder->getAccelerationEnabled());
-                //Serial.print("  Acceleration is ");
-                //Serial.println((encoder->getAccelerationEnabled()) ? "enabled" : "disabled");
-                break;
+        case ClickEncoder::Pressed: Serial.println(ClickEncoder::Pressed); break;
+        case ClickEncoder::Held: Serial.println(ClickEncoder::Held); break;
+        case ClickEncoder::Released: Serial.println(ClickEncoder::Released); break;
+        case ClickEncoder::Clicked: Serial.println(ClickEncoder::Clicked);
+            Menu.PressEncoder(); break;
+        case ClickEncoder::DoubleClicked:
+            // Serial.println("ClickEncoder::DoubleClicked");
+            encoder->setAccelerationEnabled(!encoder->getAccelerationEnabled());
+            //Serial.print("  Acceleration is ");
+            //Serial.println((encoder->getAccelerationEnabled()) ? "enabled" : "disabled");
+            break;
         }
     }
 }
