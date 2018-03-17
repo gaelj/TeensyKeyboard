@@ -24,10 +24,45 @@
     <ClInclude Include="KeyboardKey.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UserMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SynthParameters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UserMenuItem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="KeyboardKey.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UserMenu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SynthParameters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UserMenuItem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Images\keyboard.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Images\keyboard.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Images\background.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Images\backgroundHalf2.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Images\backgroundHalf1.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
