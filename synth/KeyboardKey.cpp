@@ -111,9 +111,9 @@ void KeyboardKeyClass::SetInputVoltage(int voltage, long now)
 // Get the pressed state of they key according to the sensed voltage
 KeyboardKeyStates KeyboardKeyClass::GetKeyStateByVoltage(int voltage)
 {
-    if (voltage < V_UNPRESSED + V_TOLERANCE)
+    if (voltage > V_UNPRESSED - V_TOLERANCE)
         return Unpressed;
-    if (voltage > V_PRESSED - V_TOLERANCE)
+    if (voltage < V_PRESSED + V_TOLERANCE)
         return Pressed;
     return Pressing;
 }
@@ -136,13 +136,13 @@ int KeyboardKeyClass::SimulateKeyMotionVoltage(uint32_t start)
 {
     uint32_t delay = millis() - start;
     if (delay < 10) {
-        return V_PRESSED / 2;
+        return V_UNPRESSED / 2;
     }
     else if (delay < 15) {
         return V_PRESSED;
     }
     else if (delay < 100) {
-        return V_PRESSED / 2;
+        return V_UNPRESSED / 2;
     }
     else {
         return V_UNPRESSED;

@@ -28,8 +28,8 @@ class KeyboardKeyClass
 protected:
     const long VELOCITY_TIME_CONSTANT = 18; // ms
 
-    const float V_UNPRESSED = 0;
-    const float V_PRESSED   = (1 << 10); // 1024
+    const float V_UNPRESSED = (1 << 10); // 1024
+    const float V_PRESSED   = 0;
     const float V_TOLERANCE = (1 << 6);  // 64;
 
     static const int A440_KEY_NUMBER = 33; // key number of A 440Hz, 0-based
