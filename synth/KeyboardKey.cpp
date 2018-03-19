@@ -82,7 +82,11 @@ void KeyboardKeyClass::SetInputVoltage(int voltage, long now)
         case Pressed:
             if (!params->PlayDemo) return;
             EndPressingTimestamp = now;
-            velocity = GetVelocityByTimespan(EndPressingTimestamp - StartPressingTimestamp);
+            if (keyState == Pressing)
+                velocity = GetVelocityByTimespan(EndPressingTimestamp - StartPressingTimestamp);
+            else
+                velocity = 1;
+
             WaveForm1->amplitude(velocity);
             
             Envelope1->delay(params->EnvelopeDelay);
