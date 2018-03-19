@@ -98,22 +98,22 @@ AudioMixer4* Mixers[MIXER_CNT] = {
 };
 
 // Analog multiplexed inputs, 1 / octave
-#define AI_OCT_1        A10 // = DIO 22
-#define AI_OCT_2        A11 // = DIO 21
-#define AI_OCT_3        A19 // = DIO 38 
-#define AI_OCT_4        A20 // = DIO 39
-#define AI_OCT_5        A21 // not a DIO
-#define AI_OCT_6        A22 // not a DIO
+#define AI_OCT_1        A14
+#define AI_OCT_2        A15
+#define AI_OCT_3        A16
+#define AI_OCT_4        A17
+#define AI_OCT_5        A18
 
 // Multiplexer address outputs
 #define ADDR_PIN_CNT    4
-#define MUX_ADDR_0      24
-#define MUX_ADDR_1      25
-#define MUX_ADDR_2      26
-#define MUX_ADDR_3      27
+#define MUX_SEL         25
+#define MUX_ADDR_0      26
+#define MUX_ADDR_1      27
+#define MUX_ADDR_2      28
+#define MUX_ADDR_3      29
 
 int MuxAddressPins[ADDR_PIN_CNT] = { MUX_ADDR_0, MUX_ADDR_1, MUX_ADDR_2, MUX_ADDR_3 };
-int analogInPins[OCTAVES_CNT] = { AI_OCT_1, AI_OCT_2, AI_OCT_3, AI_OCT_4, AI_OCT_5, AI_OCT_6 };
+int analogInPins[OCTAVES_CNT] = { AI_OCT_1, AI_OCT_2, AI_OCT_3, AI_OCT_4, AI_OCT_5 };
 
 // Rotary encoder
 #define ROT_PUSH        47
@@ -129,7 +129,7 @@ int analogInPins[OCTAVES_CNT] = { AI_OCT_1, AI_OCT_2, AI_OCT_3, AI_OCT_4, AI_OCT
 #define TFT_RST     51
 
 /*
-// i²c: Trellis
+// i2c: Trellis
 #define PIN_SDA     56
 #define PIN_SCL     57
 #define PIN_I2CINT  55
@@ -213,6 +213,8 @@ void setup()
         pinMode(MuxAddressPins[bit], OUTPUT);
         digitalWrite(MuxAddressPins[bit], LOW);
     }
+    pinMode(MUX_SEL, OUTPUT);
+    digitalWrite(MUX_SEL, LOW);
 
     AudioMemory(61);
 
@@ -331,39 +333,50 @@ void loop()
         for (uint bit = 0; bit < ADDR_PIN_CNT; bit++)
             digitalWrite(MuxAddressPins[bit], 1 & (note >> bit));
 
-        delayMicroseconds(1); // leave the multiplexer some time to switch (~500ns @3.3V)
-
+        delayMicroseconds(10); // leave the multiplexer some time to switch (~500ns @3.3V)
+        
         for (uint octave = 0; octave < OCTAVES_CNT; octave++) {
-            //int voltage = analogRead(analogInPins[octave]);
-            //Keys[octave][note].SetInputVoltage(voltage, millis());
+            if (SynthParameters.PlayDemo)
+                Keys[octave][note].SimulateKeyMotion();
+            else {
+                int voltage = analogRead(analogInPins[octave]);
+                Keys[octave][note].SetInputVoltage(voltage, millis());
 
-            Keys[octave][note].SimulateKeyMotion();
+                //if (octave == 4) {
+                    Serial.print(voltage);
+                    Serial.print("\t");
+                //}
+            }
         }
     }
+    Serial.println();
 
     uint32_t now = millis();
 
     // press next key
-    if ((now - lastNoteStart) > 100) {
-        lastNoteStart = now;
+    if (SynthParameters.PlayDemo) {
+        if ((now - lastNoteStart) > 100) {
+            lastNoteStart = now;
 
-        // skip the last octave except for the first key
-        if (currentOctave == OCTAVES_CNT - 1 && currentNote == 0) {
-            currentNote = NOTES_PER_OCTAVE - 1;
+            // skip the last octave except for the first key
+            if (currentOctave == OCTAVES_CNT - 1 && currentNote == 0) {
+                currentNote = NOTES_PER_OCTAVE - 1;
+            }
+
+            if (currentNote == 4 || currentNote == 11)
+                currentNote = (currentNote + 1) % NOTES_PER_OCTAVE;
+            else
+                currentNote = (currentNote + 2) % NOTES_PER_OCTAVE;
+
+            if (currentNote == 0)
+                currentOctave = (currentOctave + 1) % OCTAVES_CNT;
+
+            Keys[currentOctave][currentNote].KeyPressStartTime = now;
         }
-
-        if (currentNote == 4 || currentNote == 11)
-            currentNote = (currentNote + 1) % NOTES_PER_OCTAVE;
-        else
-            currentNote = (currentNote + 2) % NOTES_PER_OCTAVE;
-
-        if (currentNote == 0)
-            currentOctave = (currentOctave + 1) % OCTAVES_CNT;
-
-        Keys[currentOctave][currentNote].KeyPressStartTime = now;
     }
-    encoderValue += encoder->getValue();
 
+    // handle encoder rotation
+    encoderValue += encoder->getValue();
     if (encoderValue != encoderValueLast) {
         Menu.RotateEncoder(encoderValue - encoderValueLast);
         encoderValueLast = encoderValue;
@@ -371,6 +384,7 @@ void loop()
         //Serial.println(encoderValue);
     }
 
+    // handle encoder clicks
     ClickEncoder::Button b = encoder->getButton();
     if (b != ClickEncoder::Open) {
         //Serial.print("Button: ");

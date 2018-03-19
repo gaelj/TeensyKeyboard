@@ -14,7 +14,7 @@
 #include "SynthParameters.h"
 
 // Keyboard definition
-#define OCTAVES_CNT          6
+#define OCTAVES_CNT          5
 #define NOTES_PER_OCTAVE    12
 
 enum KeyboardKeyStates {
